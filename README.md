@@ -16,7 +16,7 @@ git clone https://github.com/arthursantoslouro-ux/kmerr-src.git && cd kmerr-src 
 ### Termux
 
 ```sh
-git clone https://github.com/arthursantoslouro-ux/kmerr-src.git && cd kmerr-src && install -m 755 kmerr.sh pop"$PREFIX/bin/kmerr"
+git clone https://github.com/arthursantoslouro-ux/kmerr-src.git && cd kmerr-src && install -m 755 kmerr.sh "$PREFIX/bin/kmerr"
 ```
 
 
