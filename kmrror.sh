@@ -2,132 +2,216 @@
 
 CONFIG="${HOME}/.kr_conf"
 
+# Colors
+reset='\033[0m'
+red='\033[1;31m'
+green='\033[1;32m'
 
+# Default actions
+SUCCESS=""
+FAILED=""
+END=""
+
+# Create configuration file if it doesn't exist
 if [ ! -f "$CONFIG" ]; then
-cat << 'eof' > "$CONFIG"
+cat << 'EOF' > "$CONFIG"
 # kr_conf
-# kmrror configuration file
-#
-# WARNING: SUCCESS, FAILED and ON_* variables contain shell commands.
-# Be careful when editing this file.
+# WARNING: SUCCESS, FAILED and END contain shell commands
 
+# This file is automatically created by kmrror.
+# It is used to customize actions when a command succeeds, fails,
+# or finishes.
 
-# Actions executed when commands succeed or fail.
-#
-# SUCCESS:
-#   Executed when a command finishes successfully (exit code 0).
-#
-# FAILED:
-#   Executed when a command fails and no custom action exists.
+# SUCCESS is executed when the command finishes successfully.
+SUCCESS=""
 
+# FAILED is executed when the command fails.
+FAILED=""
 
-# Custom actions based on exit codes.
-#
-# The format is:
-#
-# ON_EXIT_CODE='command'
-#
+# END is executed when the command finishes, regardless of its result.
+END=""
+
+# You can also define actions for specific exit codes.
 # Example:
-#
-# ON_127='your command here'
-#
-# Exit codes:
-#
-# 0    Command completed successfully
-# 1    General error
-# 2    Invalid usage
-# 126  Permission denied
-# 127  Command not found
-# 130  Command interrupted by user
-#
-#
-# Available variables:
-#
-# SUCCESS
-#   Action for successful commands.
-#
-# FAILED
-#   Default action for failed commands.
-#
-# ON_CODE
-#   Custom action for a specific exit code.
-#
-# Example:
-#
-# ON_127='custom action' 
+# ON_127="echo 'Command not found'"
+# ON_126="echo 'Permission denied'"
+EOF
+fi
 
-eof
-fi 
-
+# Load configuration
 . "$CONFIG"
 
+
 error() {
-
-printf "${red}[ ERROR ] command failed${reset}\n"
+    printf '%b[ ERROR ] command failed%b\n' "$red" "$reset"
 }
 
-
-
-
-checar() {
-"$@"
-codigo=$? 
-
-if [ "$codigo" -eq 0 ]; then
-printf "${green}[ ok ] command completed${reset}\n"
-eval "$SUCCESS"
-else 
-error
-eval "$FAILED"
-fi
-
-if [ "$codigo" -ne 0 ]; then
-    acao=$(eval "printf '%s' \"\${ON_$codigo}\"")
-
-    if [ -n "$acao" ]; then
-        eval "$acao"
-    fi
-fi
-
-}
 
 help() {
-    printf "kmrror - ferramenta de diagnóstico\n\n"
-    printf "Uso: kmrror [opção]\n\n"
-    printf "Opções:\n"
-    printf "  -h, --help      Mostra ajuda\n"
-    printf "  -v, --version   Mostra versão\n"
-    printf "  check           Verifica sistema\n"
+    printf '%s\n' \
+        "kmrror - ferramenta de diagnóstico" \
+        "" \
+        "Uso:" \
+        "  kmrror [opções] comando [argumentos...]" \
+        "" \
+        "Opções:" \
+        "  -h, --help              Mostra ajuda" \
+        "  -v, --version           Mostra versão" \
+        "  --success COMMAND       Ação em caso de sucesso" \
+        "  --success=COMMAND       Ação em caso de sucesso" \
+        "  --failed COMMAND        Ação em caso de falha" \
+        "  --failed=COMMAND        Ação em caso de falha" \
+        "  --end COMMAND           Ação executada ao terminar" \
+        "  --end=COMMAND           Ação executada ao terminar" \
+        "  --                    Fim das opções do kmrror" \
+        "" \
+        "Exemplos:" \
+        "  kmrror apt update" \
+        "  kmrror --success 'echo OK' true" \
+        "  kmrror --failed 'echo ERRO' false" \
+        "  kmrror --end 'echo terminou' sleep 5" \
+        "  kmrror --end='termux-toast \"terminou\"' sleep 5"
 }
 
 
-
-mostrar_erro()
-{
+mostrar_erro() {
     case "$1" in
-        127) echo "Command not found" ;;
-        126) echo "Permission denied: cannot execute file" ;;
-        130) echo "Command interrupted by user (Ctrl+C)" ;;
-        139) echo "Segmentation fault" ;;
-        *) echo "Unknown error (exit code: $1)" ;;
+        127)
+            echo "Command not found"
+            ;;
+        126)
+            echo "Permission denied: cannot execute file"
+            ;;
+        130)
+            echo "Command interrupted by user (Ctrl+C)"
+            ;;
+        139)
+            echo "Segmentation fault"
+            ;;
+        *)
+            echo "Unknown error (exit code: $1)"
+            ;;
     esac
 }
 
-reset="\033[0m"
-red="\033[1;31m"
-green="\033[1;32m"
+
+# Parse kmrror options
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+
+        -h|--help)
+            help
+            exit 0
+            ;;
+
+        -v|--version)
+            printf '%s\n' "kmrror 0.1.1"
+            exit 0
+            ;;
+
+        --success)
+            if [ "$#" -lt 2 ]; then
+                printf '%b[ ERROR ] --success requires a command%b\n' \
+                    "$red" "$reset" >&2
+                exit 2
+            fi
+
+            SUCCESS="$2"
+            shift 2
+            ;;
+
+        --success=*)
+            SUCCESS="${1#*=}"
+            shift
+            ;;
+
+        --failed)
+            if [ "$#" -lt 2 ]; then
+                printf '%b[ ERROR ] --failed requires a command%b\n' \
+                    "$red" "$reset" >&2
+                exit 2
+            fi
+
+            FAILED="$2"
+            shift 2
+            ;;
+
+        --failed=*)
+            FAILED="${1#*=}"
+            shift
+            ;;
+
+        --end)
+            if [ "$#" -lt 2 ]; then
+                printf '%b[ ERROR ] --end requires a command%b\n' \
+                    "$red" "$reset" >&2
+                exit 2
+            fi
+
+            END="$2"
+            shift 2
+            ;;
+
+        --end=*)
+            END="${1#*=}"
+            shift
+            ;;
+
+        --)
+            shift
+            break
+            ;;
+
+        *)
+            break
+            ;;
+
+    esac
+done
 
 
-if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    help
-    exit 0
+checar() {
+    "$@"
+    codigo=$?
+
+    if [ "$codigo" -eq 0 ]; then
+        printf '%b[ ok ] command completed%b\n' "$green" "$reset"
+
+        if [ -n "$SUCCESS" ]; then
+            eval "$SUCCESS"
+        fi
+    else
+        error
+
+        if [ -n "$FAILED" ]; then
+            eval "$FAILED"
+        fi
+
+        # Execute action for specific exit code
+        acao=$(eval "printf '%s' \"\${ON_$codigo}\"")
+
+        if [ -n "$acao" ]; then
+            eval "$acao"
+        fi
+    fi
+
+    # END always runs
+    if [ -n "$END" ]; then
+        eval "$END"
+    fi
+
+    return "$codigo"
+}
+
+
+# No command
+if [ "$#" -eq 0 ]; then
+    printf '%b[ ERROR ] no command specified%b\n' "$red" "$reset"
+    printf '%s\n' "Use 'kmrror --help' for help."
+    exit 2
 fi
 
-if [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
-    printf "kmrror 0.1.0\n"
-    exit 0
-fi
 
-
+# Execute monitored command
 checar "$@"
-
+exit $?
