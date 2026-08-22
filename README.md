@@ -1,5 +1,10 @@
 # kmerr
 
+
+<p align="center">
+  <img src="/KMERR_20260822_121329_0000.png" alt="KMERR_20260822_121329_0000.png">
+</p>
+
 # o que é kmerr?
 
 kmerr é uma ferramenta de linha de comando (CLI) open-source ela serve para checar se o comando foi terminado com sucesso ou com erro ela permite personalizar as ações de erro ou acerto
